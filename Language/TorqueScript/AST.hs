@@ -17,11 +17,17 @@ data Definition
     | PackageDef PackageName [Function]
     deriving (Eq, Ord, Show, Typeable, Data)
 
+type PackageName = Ident
+
 {- Function definitions have an optional Namespace they are defined in. While
  - Names have namespace syntax (::), it doesn't affect how they work.
  - Functions actually care about this property, so it's made explicit here. -}
 data Function = Function (Maybe Namespace) FunctionName Params Block
     deriving (Eq, Ord, Show, Typeable, Data)
+
+type FunctionName = Ident
+type Params = [Name]
+type Block = [Statement]
 
 {- A Statement is an arrangement of Expressions that defines program structure.
  - The TS interpreter abhors statements that are not assignments or calls, such
@@ -55,10 +61,16 @@ data Expression
     | ObjectExp Object
     deriving (Eq, Ord, Show, Typeable, Data)
 
+type Arguments = [Expression]
+
 {- This is annoying because we need to account for object creation in general
  - expressions as well as inside an object creation. -}
 data Object = Create ObjectConstructor ObjectClass (Maybe ObjectName) ObjectContents
     deriving (Eq, Ord, Show, Typeable, Data)
+
+type ObjectContents = [Either Member Object]
+type ObjectName = Ident
+type ObjectClass = Either Ident Expression
 
 {- Different ways of constructing new objects. -}
 data ObjectConstructor
@@ -66,6 +78,13 @@ data ObjectConstructor
     | Datablock
     | Singleton
     deriving (Eq, Ord, Show, Typeable, Data)
+
+{- Syntax inside object creation is fairly limited. We can assign to members
+ - (members have no % prefix like variables), or construct new objects. -}
+data Member = Member MemberName Expression
+    deriving (Eq, Ord, Show, Typeable, Data)
+
+type MemberName = Ident
 
 {- Boring operators. -}
 data Op
@@ -92,11 +111,6 @@ data Assignment
 data Unary = Increment | Decrement
     deriving (Eq, Ord, Show, Typeable, Data)
 
-{- Syntax inside object creation is fairly limited. We can assign to members
- - (members have no % prefix like variables), or construct new objects. -}
-data Member = Member Ident Expression
-    deriving (Eq, Ord, Show, Typeable, Data)
-
 {- A Name represents an actual variable, as opposed to an Ident which can be
  - used for function names and everything else. Note that therefore the Ident
  - will not include the % or $ sign, since these are determined by whether the
@@ -110,15 +124,5 @@ data Name = Local Ident | Global Ident
 data Namespace = Namespace Ident
     deriving (Eq, Ord, Show, Typeable, Data)
 
-{- Some simple aliases to make definitions more readable. -}
+{- After all that, the mystical Ident is just a String. -}
 type Ident = String
-type PackageName = Ident
-type FunctionName = Ident
-type Block = [Statement]
-type Expressions = [Expression]
-type Arguments = [Expression]
-type Definitions = [Definition]
-type Params = [Name]
-type ObjectContents = [Either Member Object]
-type ObjectName = Ident
-type ObjectClass = Either Ident Expression
