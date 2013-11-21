@@ -32,15 +32,29 @@ type Block = [Statement]
 {- A Statement is an arrangement of Expressions that defines program structure.
  - The TS interpreter abhors statements that are not assignments or calls, such
  - as 5;. They are allowed here, again, for simplicity of definition and parsing
- - and would not be accepted by the TS compiler. -}
+ - and would not be accepted by the TS compiler.
+ - Curiously, break and continue are allowed anywhere, but seem to be dynamically
+ - ignored when outside a loop. -}
 data Statement
     = IfElse Expression Block (Maybe Block)
     | While Expression Block
     | For Expression Expression Expression Block
     | ForEach Name Expression Block
     | ForEachString Name Expression Block
+    | Switch Expression CaseBlock
+    | SwitchString Expression CaseBlock
+    | Break | Continue
+    | Return Expression
     | Exp Expression 
     deriving (Eq, Ord, Show, Typeable, Data)
+
+{- Yes, case labels can contain an arbitrary expression! Isn't that exciting? -}
+data Case
+    = Case Expression Block
+    | Default
+    deriving (Eq, Ord, Show, Typeable, Data)
+
+type CaseBlock = [Case]
 
 {- An Expression is, simply, something that has a value. We don't need to deal
  - with parenthetical expressions or order of operations here because this is
@@ -51,6 +65,7 @@ data Expression
     | Call (Maybe Namespace) FunctionName Arguments
     | Binary Expression Op Expression
     | Post Unary Expression -- No prefix :(
+    | Negate Expression
     | SlotAccess Expression Expression
     | ArrayAccess Expression Expression
     | IntLit Int
