@@ -44,7 +44,7 @@ data Statement
     | Switch Expression CaseBlock
     | SwitchString Expression CaseBlock
     | Break | Continue
-    | Return Expression
+    | Return (Maybe Expression)
     | Exp Expression 
     deriving (Eq, Ord, Show, Typeable, Data)
 
