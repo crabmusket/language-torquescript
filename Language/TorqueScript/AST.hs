@@ -36,7 +36,8 @@ type Block = [Statement]
  - Curiously, break and continue are allowed anywhere, but seem to be dynamically
  - ignored when outside a loop. -}
 data Statement
-    = IfElse Expression Block (Maybe Block)
+    = If Expression Block
+    | IfElse Expression Block Block
     | While Expression Block
     | For Expression Expression Expression Block
     | ForEach Name Expression Block
