@@ -7,7 +7,10 @@ import Data.Data
  - as well as definitions (functions and packages). To preserve the structure of
  - the file, these statements are in a single list, otherwise I'd pop them in
  - separate lists to save using an Either type. -}
-data File = File [Either Statement Definition]
+data File = File [TopLevel]
+    deriving (Eq, Ord, Show, Typeable, Data)
+
+data TopLevel = TLD Definition | TLS Statement
     deriving (Eq, Ord, Show, Typeable, Data)
 
 {- Definitions include functions and packages. Packages contain only function
