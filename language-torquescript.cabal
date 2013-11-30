@@ -24,5 +24,4 @@ library
 
   exposed-modules:    Language.TorqueScript
                     , Language.TorqueScript.AST
-                    , Language.TorqueScript.Sugar
                     , Language.TorqueScript.Quote
