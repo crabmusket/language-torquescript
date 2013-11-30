@@ -11,13 +11,11 @@ import qualified Prelude as P ((>>), (>>=))
 (>>=) = (P.>>=)
 infixr 2 >>, >>=
 
-test = parse file "" "package p { f f} ;;"
-
 type P = Parsec [Char] ()
 
 file :: P File
 file = do
-    tls <- topLevel `sepBy` spaces
+    tls <- topLevel `endBy` spaces
     eof
     return $ File tls
 
