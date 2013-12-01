@@ -128,7 +128,7 @@ With that in mind, let's define another type:
 
 The type of our accumulating function is a tuple of two lists of `Name`s.
 The first list will store all the names that have been _defined so far_ in a function.
-The second will be our result value, the list of names that were defined before they were used.
+The second will be our result value, the list of names that were used before they were defined.
 We'll fold through the list of `Statement`s that make up the `Block`, gradually accumulating these lists.
 
 > accumulate :: Accumulator -> NamesWithPosition -> Accumulator
