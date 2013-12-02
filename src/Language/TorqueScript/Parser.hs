@@ -44,9 +44,22 @@ blockOf f = do
         spaces
         return res
 
+parenList :: P a -> P [a]
+parenList f = do
+    char '(' >> spaces
+    contents <- f `sepBy` (spaces >> char ',' >> spaces)
+    spaces >> char ')'
+    return contents
+
 function = do
-    string "f"
-    return $ Function Nothing "" [] []
+    string "function"
+    spaces1
+    name <- ident
+    spaces
+    params <- parenList local
+    spaces
+    stmts <- blockOf statement
+    return $ Function Nothing name params stmts
 
 statement :: P Statement
 statement = do
