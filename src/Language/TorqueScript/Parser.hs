@@ -2,14 +2,15 @@ module Language.TorqueScript.Parser where
 
 import Text.Parsec
 import Language.TorqueScript.AST
+import Control.Monad (liftM)
 
 -- Trick to allow >> and >>= to be used inside clauses of an <|>. Need to change
 -- their fixity to make the <|> operator lower-precedence.
 import Prelude hiding ((>>), (>>=))
 import qualified Prelude as P ((>>), (>>=))
 (>>) = (P.>>)
-(>>=) = (P.>>=)
-infixr 2 >>, >>=
+--(>>=) = (P.>>=)
+infixr 2 >> --, >>=
 
 type P = Parsec [Char] ()
 
@@ -20,12 +21,12 @@ file = do
     return $ File tls
 
 topLevel :: P TopLevel
-topLevel = try (definition >>= return . TLD)
-           <|>  statement  >>= return . TLS
+topLevel = try (liftM TLD definition)
+           <|>  liftM TLS statement
 
 definition :: P Definition
-definition = try package
-             <|> function >>= return . FunctionDef
+definition = package
+          <|> liftM FunctionDef function
 
 package :: P Definition
 package = do
