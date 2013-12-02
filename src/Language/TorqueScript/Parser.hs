@@ -38,11 +38,15 @@ package = do
 
 blockOf :: P a -> P [a]
 blockOf f = do
-    char '{' >> spaces
-    manyTill' (char '}') $ do
+    open >> spaces
+    tillClose $ do
         res <- f
         spaces
         return res
+
+    where open = char '{'
+          close = char '}'
+          tillClose = flip manyTill $ close
 
 parenList :: P a -> P [a]
 parenList f = do
@@ -54,12 +58,27 @@ parenList f = do
 function = do
     string "function"
     spaces1
-    name <- ident
+    (ns, name) <- fname
     spaces
     params <- parenList local
     spaces
     stmts <- blockOf statement
-    return $ Function Nothing name params stmts
+    return $ Function ns name params stmts
+
+fname :: P (Maybe Namespace, FunctionName)
+fname = do
+    first <- fident
+    second <- optionMaybe $ do
+        string "::"
+        fident
+    case second of
+        Nothing -> return (Nothing, first)
+        Just n -> return (Just first, n)
+
+    where fident = do
+            first <- under <|> letter
+            rest <- many (alphaNum <|> under)
+            return $ first : rest
 
 statement :: P Statement
 statement = do
@@ -86,6 +105,4 @@ global = do
 
 semi = char ';'
 under = char '_'
-
 spaces1 = skipMany1 space
-manyTill' = flip manyTill

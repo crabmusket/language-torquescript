@@ -140,8 +140,7 @@ data Name = Local Ident | Global Ident
     deriving (Eq, Ord, Show, Typeable, Data)
 
 {- Nothing to see here. -}
-data Namespace = Namespace Ident
-    deriving (Eq, Ord, Show, Typeable, Data)
+type Namespace = Ident
 
 {- After all that, the mystical Ident is just a String. -}
 type Ident = String
