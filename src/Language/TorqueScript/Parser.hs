@@ -12,13 +12,17 @@ import qualified Prelude as P ((>>), (>>=))
 --(>>=) = (P.>>=)
 infixr 2 >> --, >>=
 
+-- Convenience function for a commonish pattern. Same as (<*) from
+-- Control.Applicative, I think.
+p `thenIgnore` q = do
+    stuff <- p
+    q
+    return stuff
+
 type P = Parsec [Char] ()
 
 file :: P File
-file = do
-    tls <- topLevel `endBy` spaces
-    eof
-    return $ File tls
+file = liftM File $ (topLevel `endBy` spaces) `thenIgnore` eof
 
 topLevel :: P TopLevel
 topLevel = try (liftM TLD definition)
@@ -40,10 +44,7 @@ package = do
 blockOf :: P a -> P [a]
 blockOf f = do
     open >> spaces
-    tillClose $ do
-        res <- f
-        spaces
-        return res
+    tillClose $ f `thenIgnore` spaces
 
     where open = char '{'
           close = char '}'
@@ -88,23 +89,34 @@ fname = do
             return $ first : rest
 
 statement :: P Statement
-statement  =  ifStmt
-          <|> whileStmt
-          <|> semi >> (return $ Return Nothing)
+statement  =  try ifStmt
+          <|> try whileStmt
+          <|> liftM Exp (expression `thenIgnore` semi)
 
 ifStmt :: P Statement
 ifStmt = do
     string "if"
     spaces
     cond <- parens $ expression
-    return $ If cond []
+    spaces
+    body <- blockOf statement
+    spaces
+    els <- optionMaybe $ do
+        try $ string "else" >> spaces >> lookAhead (char '{')
+        spaces
+        blockOf $ statement
+    return $ case els of
+        Nothing -> If cond body
+        Just e  -> IfElse cond body e
 
 whileStmt :: P Statement
 whileStmt = do
     string "while"
     spaces
     cond <- parens $ expression
-    return $ While cond []
+    spaces
+    body <- blockOf statement
+    return $ While cond body
 
 expression :: P Expression
 expression = liftM Variable (local <|> global)
@@ -116,16 +128,10 @@ ident = do
     return $ first : rest
 
 local :: P Name
-local = do
-    char '%'
-    n <- ident
-    return $ Local n
+local = liftM Local $ char '%' >> ident
 
 global :: P Name
-global = do
-    char '$'
-    n <- ident
-    return $ Global n
+global = liftM Global $ char '$' >> ident
 
 semi = char ';'
 under = char '_'
