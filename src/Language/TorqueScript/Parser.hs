@@ -49,12 +49,18 @@ blockOf f = do
           close = char '}'
           tillClose = flip manyTill $ close
 
-parenList :: P a -> P [a]
-parenList f = do
-    char '(' >> spaces
-    contents <- f `sepBy` (spaces >> char ',' >> spaces)
-    spaces >> char ')'
+parens :: P a -> P a
+parens f = do
+    open >> spaces
+    contents <- f
+    spaces >> close
     return contents
+
+    where open = char '('
+          close = char ')'
+
+parenList :: P a -> P [a]
+parenList f = parens $ f `sepBy` (spaces >> char ',' >> spaces)
 
 function = do
     string "function"
@@ -82,9 +88,26 @@ fname = do
             return $ first : rest
 
 statement :: P Statement
-statement = do
-    semi
-    return $ Return Nothing
+statement  =  ifStmt
+          <|> whileStmt
+          <|> semi >> (return $ Return Nothing)
+
+ifStmt :: P Statement
+ifStmt = do
+    string "if"
+    spaces
+    cond <- parens $ expression
+    return $ If cond []
+
+whileStmt :: P Statement
+whileStmt = do
+    string "while"
+    spaces
+    cond <- parens $ expression
+    return $ While cond []
+
+expression :: P Expression
+expression = liftM Variable (local <|> global)
 
 ident :: P String
 ident = do
