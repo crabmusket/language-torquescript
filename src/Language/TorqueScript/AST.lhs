@@ -62,6 +62,7 @@ ignored when outside a loop.
 >     = If Expression Block
 >     | IfElse Expression Block Block
 >     | While Expression Block
+>     | DoWhile Block Expression
 >     | For Expression Expression Expression Block
 >     | ForEach Name Expression Block
 >     | ForEachString Name Expression Block
