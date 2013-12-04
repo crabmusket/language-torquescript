@@ -51,17 +51,15 @@ blockOf f = do
           tillClose = flip manyTill close
 
 parens :: P a -> P a
-parens f = do
-    open >> spaces
-    contents <- f
-    spaces >> close
-    return contents
-
+parens = between (open >> spaces) (spaces >> close)
     where open = char '('
           close = char ')'
 
 parenList :: P a -> P [a]
 parenList f = parens $ f `sepBy` (spaces >> char ',' >> spaces)
+
+spaced :: P a -> P a
+spaced = between spaces spaces
 
 function = do
     string "function"
@@ -91,16 +89,18 @@ fname = do
 statement :: P Statement
 statement  =  try ifStmt
           <|> try whileStmt
+          <|> try doWhileStmt
+          <|> try forStmt
+          <|> try loopCntrl
+          <|> try forEach
+          <|> try forEachString
           <|> liftM Exp (expression `thenIgnore` semi)
 
 ifStmt :: P Statement
 ifStmt = do
     string "if"
-    spaces
-    cond <- parens expression
-    spaces
-    body <- blockOf statement
-    spaces
+    cond <- spaced $ parens expression
+    body <- spaced $ blockOf statement
     els <- optionMaybe $ do
         try $ string "else" >> spaces >> lookAhead (char '{')
         spaces
@@ -112,11 +112,47 @@ ifStmt = do
 whileStmt :: P Statement
 whileStmt = do
     string "while"
-    spaces
-    cond <- parens expression
-    spaces
+    cond <- spaced $ parens expression
     body <- blockOf statement
     return $ While cond body
+
+doWhileStmt :: P Statement
+doWhileStmt = do
+    string "do"
+    body <- spaced $ blockOf statement
+    string "while"
+    cond <- spaced $ parens expression
+    semi
+    return $ DoWhile body cond
+
+forStmt :: P Statement
+forStmt = do
+    string "for"
+    (init, cond, term) <- spaced . parens $ do
+        i <- expression `thenIgnore` (semi >> spaces)
+        c <- expression `thenIgnore` (semi >> spaces)
+        t <- expression
+        return (i, c, t)
+    body <- blockOf statement
+    return $ For init cond term body
+
+forEach       = forEach' "foreach"  ForEach
+forEachString = forEach' "foreach$" ForEachString
+forEach' s c = do
+    string s
+    (name, iter) <- spaced . parens $ do
+        n <- local
+        spaces
+        string "in"
+        spaces
+        i <- expression
+        return (n, i)
+    body <- blockOf statement
+    return $ c name iter body
+
+loopCntrl :: P Statement
+loopCntrl = try (string "break" >> semi >> return Break)
+            <|> (string "continue" >> semi >> return Continue)
 
 expression :: P Expression
 expression = liftM Variable (local <|> global)
@@ -133,6 +169,6 @@ local = liftM Local $ char '%' >> ident
 global :: P Name
 global = liftM Global $ char '$' >> ident
 
-semi = char ';'
+semi = spaces >> char ';'
 under = char '_'
 spaces1 = skipMany1 space
