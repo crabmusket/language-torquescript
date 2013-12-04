@@ -53,8 +53,9 @@ Statements
 
 A Statement is an arrangement of Expressions that defines program structure.
 The TS interpreter abhors statements that are not assignments or calls, such
-as 5;. They are allowed here, again, for simplicity of definition and parsing
+as `5;`. They are allowed here, again, for simplicity of definition and parsing
 and would not be accepted by the TS compiler.
+
 Curiously, break and continue are allowed anywhere, but seem to be dynamically
 ignored when outside a loop.
 

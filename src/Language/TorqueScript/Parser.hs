@@ -48,7 +48,7 @@ blockOf f = do
 
     where open = char '{'
           close = char '}'
-          tillClose = flip manyTill $ close
+          tillClose = flip manyTill close
 
 parens :: P a -> P a
 parens f = do
@@ -97,14 +97,14 @@ ifStmt :: P Statement
 ifStmt = do
     string "if"
     spaces
-    cond <- parens $ expression
+    cond <- parens expression
     spaces
     body <- blockOf statement
     spaces
     els <- optionMaybe $ do
         try $ string "else" >> spaces >> lookAhead (char '{')
         spaces
-        blockOf $ statement
+        blockOf statement
     return $ case els of
         Nothing -> If cond body
         Just e  -> IfElse cond body e
@@ -113,7 +113,7 @@ whileStmt :: P Statement
 whileStmt = do
     string "while"
     spaces
-    cond <- parens $ expression
+    cond <- parens expression
     spaces
     body <- blockOf statement
     return $ While cond body
