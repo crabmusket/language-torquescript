@@ -6,7 +6,7 @@ syntax tree of a TorqueScript program.
 
 > {-# LANGUAGE DeriveDataTypeable #-}
 > module Language.TorqueScript.AST where
->
+> 
 > import Data.Data
 
 The top level
@@ -19,7 +19,7 @@ them in separate lists to save using another discriminative type.
 
 > data File = File [TopLevel]
 >     deriving (Eq, Show, Typeable, Data)
->
+
 > data TopLevel = TLD Definition | TLS Statement
 >     deriving (Eq, Show, Typeable, Data)
 
@@ -34,7 +34,7 @@ definitions; no other code should be possible inside them.
 >     = FunctionDef Function
 >     | PackageDef PackageName [Function]
 >     deriving (Eq, Show, Typeable, Data)
->
+
 > type PackageName = Ident
 
 Function definitions have an optional Namespace they are defined in. While
