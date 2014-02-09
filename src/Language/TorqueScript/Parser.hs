@@ -2,7 +2,8 @@ module Language.TorqueScript.Parser where
 
 import Text.Parsec
 import Language.TorqueScript.AST
-import Control.Monad (liftM)
+import Control.Monad (liftM, void)
+import Control.Applicative ((<$>), (<*>))
 
 -- Trick to allow >> and >>= to be used inside clauses of an <|>. Need to change
 -- their fixity to make the <|> operator lower-precedence.
@@ -22,15 +23,15 @@ p `thenIgnore` q = do
 type P = Parsec [Char] ()
 
 file :: P File
-file = liftM File $ (topLevel `endBy` spaces) `thenIgnore` eof
+file = File <$> (topLevel `endBy` spaces) `thenIgnore` eof
 
 topLevel :: P TopLevel
-topLevel = try (liftM TLD definition)
-           <|>  liftM TLS statement
+topLevel = try (TLD <$> definition)
+           <|> (TLS <$> statement)
 
 definition :: P Definition
 definition = package
-          <|> liftM FunctionDef function
+          <|> FunctionDef <$> function
 
 package :: P Definition
 package = do
@@ -91,10 +92,13 @@ statement  =  try ifStmt
           <|> try whileStmt
           <|> try doWhileStmt
           <|> try forStmt
-          <|> try loopCntrl
           <|> try forEach
           <|> try forEachString
-          <|> liftM Exp (expression `thenIgnore` semi)
+          <|> try switch
+          <|> try switchString
+          <|> try (loopCntrl `thenIgnore` semi)
+          <|> try (returnStmt `thenIgnore` semi)
+          <|> ExpStmt <$> expression `thenIgnore` semi
 
 ifStmt :: P Statement
 ifStmt = do
@@ -150,12 +154,41 @@ forEach' s c = do
     body <- blockOf statement
     return $ c name iter body
 
+switch       = switch' "switch"  Switch
+switchString = switch' "switch$" SwitchString
+switch' s c = do
+    string s
+    target <- spaced . parens $ expression
+    body <- blockOf cas
+    return $ c target body
+
+cas :: P Case
+cas = aCase <|> aDefault
+    where aCase = do
+            string "case"
+            cond <- spaced expression
+            spaced $ char ':'
+            body <- manyTill statement endCase
+            return $ Case cond body
+          aDefault = do
+            string "default"
+            spaced $ char ':'
+            body <- manyTill statement endCase
+            return $ Default body
+          endCase = try $ lookAhead $ spaces >> (void (char '}') <|> void cas)
+
 loopCntrl :: P Statement
-loopCntrl = try (string "break" >> semi >> return Break)
-            <|> (string "continue" >> semi >> return Continue)
+loopCntrl = try (string "break" >> return Break)
+            <|> (string "continue" >> return Continue)
+
+returnStmt :: P Statement
+returnStmt = do
+    string "return"
+    exp <- optionMaybe (spaced expression)
+    return $ Return exp
 
 expression :: P Expression
-expression = liftM Variable (local <|> global)
+expression = L . Variable <$> (local <|> global)
 
 ident :: P String
 ident = do
@@ -164,10 +197,10 @@ ident = do
     return $ first : rest
 
 local :: P Name
-local = liftM Local $ char '%' >> ident
+local = Local <$> (char '%' >> ident)
 
 global :: P Name
-global = liftM Global $ char '$' >> ident
+global = Global <$> (char '$' >> ident)
 
 semi = spaces >> char ';'
 under = char '_'

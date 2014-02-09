@@ -71,14 +71,14 @@ ignored when outside a loop.
 >     | SwitchString Expression CaseBlock
 >     | Break | Continue
 >     | Return (Maybe Expression)
->     | Exp Expression 
+>     | ExpStmt Expression
 >     deriving (Eq, Show, Typeable, Data)
 
 Yes, case labels can contain an arbitrary expression! Isn't that exciting?
 
 > data Case
 >     = Case Expression Block
->     | Default
+>     | Default Block
 >     deriving (Eq, Show, Typeable, Data)
 
 > type CaseBlock = [Case]
@@ -86,38 +86,48 @@ Yes, case labels can contain an arbitrary expression! Isn't that exciting?
 Expressions
 -----------
 
-An Expression is, simply, something that has a value. We don't need to deal
+An expression is, simply, something that has a value. We don't need to deal
 with parenthetical expressions or order of operations here because this is
 just an AST, not a grammar. Those are both implicit in the finally constructed
 tree. The parser, on the other hand, needs to worry about them.
 
-> data Expression
->     = Assign Expression Assignment Expression
->     | Call (Maybe Namespace) FunctionName Arguments
->     | Binary Expression Op Expression
->     | Post Unary Expression -- No prefix :(
->     | Negate Expression
->     | SlotAccess Expression Expression
->     | ArrayAccess Expression Expression
+TorqueScript has a concept of left-hand and right-hand expressions. The difference
+is that left-hand expressions can be assigned to, while right-hand expressions
+cannot. All left-hand expressions can be used as right-hand expressions
+(represented by the `L` constructor of `RHS`).
+
+> type Expression = RHS
+> data RHS
+>     = Assign LHS Assignment RHS
+>     | FunctionCall (Maybe Namespace) FunctionName Arguments
+>     | MethodCall RHS Arguments
+>     | Binary RHS Op RHS
+>     | Post Unary RHS -- No prefix :(
+>     | Negate RHS
 >     | IntLit Int
 >     | FloatLit Float
 >     | StringLit String
 >     | TaggedStringLit String
->     | Variable Name
 >     | ObjectExp Object
+>     | L LHS
 >     deriving (Eq, Show, Typeable, Data)
 
 > type Arguments = [Expression]
+
+The only things allowed to be assigned to are variables, object slots, and
+array slots.
+
+> data LHS
+>     = Variable Name
+>     | SlotAccess Expression Expression
+>     | ArrayAccess Expression Expression
+>     deriving (Eq, Show, Typeable, Data)
 
 This is annoying because we need to account for object creation in general
 expressions as well as inside an object creation.
 
 > data Object = Create ObjectConstructor ObjectClass (Maybe ObjectName) ObjectContents
 >     deriving (Eq, Show, Typeable, Data)
-
-> type ObjectContents = [Either Member Object]
-> type ObjectName = Ident
-> type ObjectClass = Either Ident Expression
 
 Different ways of constructing new objects.
 
@@ -126,6 +136,12 @@ Different ways of constructing new objects.
 >     | Datablock
 >     | Singleton
 >     deriving (Eq, Show, Typeable, Data)
+
+And the rest of an Object's types are just aliases:
+
+> type ObjectContents = [Either Member Object]
+> type ObjectName = Ident
+> type ObjectClass = Either Ident Expression
 
 Syntax inside object creation is fairly limited. We can assign to members
 (members have no % prefix like variables), or construct new objects.
